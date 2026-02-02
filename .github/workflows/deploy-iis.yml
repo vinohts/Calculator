@@ -14,10 +14,15 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Deploy Calculator to IIS
+        shell: cmd
         run: |
           echo Deploying Calculator
-          xcopy . C:\inetpub\calculator /EXCLUDE:.git,.github /Y /E /I /EXCLUDE:.git,.github
+          if not exist C:\inetpub\calculator mkdir C:\inetpub\calculator
+          copy /Y index.html C:\inetpub\calculator
+          if exist *.css copy /Y *.css C:\inetpub\calculator
+          if exist *.js copy /Y *.js C:\inetpub\calculator
 
-      - name: Restart IIS App Pool
+      - name: Restart IIS
+        shell: cmd
         run: |
-          %windir%\system32\inetsrv\appcmd recycle apppool /apppool.name:DefaultAppPool
+          iisreset
