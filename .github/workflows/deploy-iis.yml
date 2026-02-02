@@ -1,4 +1,4 @@
-name: Deploy Calculator to IIS (Isolated Site)
+name: Deploy Calculator to IIS (Fresh Setup)
 
 on:
   push:
@@ -18,16 +18,26 @@ jobs:
         run: |
           if not exist C:\inetpub\calculator mkdir C:\inetpub\calculator
 
-      - name: Create IIS App Pool (if not exists)
+      - name: Delete existing App Pool if exists
         shell: cmd
         run: |
-          %windir%\system32\inetsrv\appcmd list apppool /name:CalculatorPool || ^
+          %windir%\system32\inetsrv\appcmd list apppool /name:CalculatorPool && ^
+          %windir%\system32\inetsrv\appcmd delete apppool /apppool.name:CalculatorPool || echo "No existing App Pool"
+
+      - name: Delete existing IIS Site if exists
+        shell: cmd
+        run: |
+          %windir%\system32\inetsrv\appcmd list site /name:CalculatorSite && ^
+          %windir%\system32\inetsrv\appcmd delete site /site.name:CalculatorSite || echo "No existing site"
+
+      - name: Create IIS App Pool
+        shell: cmd
+        run: |
           %windir%\system32\inetsrv\appcmd add apppool /name:CalculatorPool
 
-      - name: Create IIS Website (if not exists)
+      - name: Create IIS Website
         shell: cmd
         run: |
-          %windir%\system32\inetsrv\appcmd list site /name:CalculatorSite || ^
           %windir%\system32\inetsrv\appcmd add site ^
             /name:CalculatorSite ^
             /physicalPath:C:\inetpub\calculator ^
