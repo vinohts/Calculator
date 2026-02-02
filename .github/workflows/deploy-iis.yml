@@ -50,3 +50,8 @@ jobs:
         shell: cmd
         run: |
           %windir%\system32\inetsrv\appcmd recycle apppool /apppool.name:CalculatorPool
+
+      - name: OPTIONAL: IIS Reset (lab only)
+        shell: cmd
+        run: |
+          iisreset
