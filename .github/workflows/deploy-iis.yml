@@ -1,4 +1,4 @@
-name: Deploy Calculator to IIS
+name: Deploy Calculator to IIS (Isolated Site)
 
 on:
   push:
@@ -13,16 +13,40 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v3
 
-      - name: Deploy Calculator to IIS
+      - name: Ensure IIS folder exists
+        shell: cmd
+        run: |
+          if not exist C:\inetpub\calculator mkdir C:\inetpub\calculator
+
+      - name: Create IIS App Pool (if not exists)
+        shell: cmd
+        run: |
+          %windir%\system32\inetsrv\appcmd list apppool /name:CalculatorPool || ^
+          %windir%\system32\inetsrv\appcmd add apppool /name:CalculatorPool
+
+      - name: Create IIS Website (if not exists)
+        shell: cmd
+        run: |
+          %windir%\system32\inetsrv\appcmd list site /name:CalculatorSite || ^
+          %windir%\system32\inetsrv\appcmd add site ^
+            /name:CalculatorSite ^
+            /physicalPath:C:\inetpub\calculator ^
+            /bindings:http/192.168.1.34:8082
+
+      - name: Assign App Pool to Site
+        shell: cmd
+        run: |
+          %windir%\system32\inetsrv\appcmd set app "CalculatorSite/" /applicationPool:CalculatorPool
+
+      - name: Deploy Calculator files
         shell: cmd
         run: |
           echo Deploying Calculator
-          if not exist C:\inetpub\calculator mkdir C:\inetpub\calculator
           copy /Y index.html C:\inetpub\calculator
           if exist *.css copy /Y *.css C:\inetpub\calculator
           if exist *.js copy /Y *.js C:\inetpub\calculator
 
-      - name: Restart IIS
+      - name: Restart Calculator App Pool
         shell: cmd
         run: |
-          iisreset
+          %windir%\system32\inetsrv\appcmd recycle apppool /apppool.name:CalculatorPool
