@@ -13,16 +13,10 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v3
 
-      - name: Build Calculator App
+      - name: Deploy Calculator to IIS
         run: |
-          echo Building Calculator
-          mkdir build
-          xcopy * build\ /Y /E /I
-
-      - name: Deploy to IIS
-        run: |
-          echo Deploying to IIS
-          xcopy build\* C:\inetpub\calculator /Y /E /I
+          echo Deploying Calculator
+          xcopy . C:\inetpub\calculator /Y /E /I /EXCLUDE:.git,.github
 
       - name: Restart IIS App Pool
         run: |
