@@ -61,5 +61,4 @@ jobs:
 
       - name: OPTIONAL: IIS Reset (lab only)
         shell: cmd
-        run: |
-          iisreset
+        run: iisreset
