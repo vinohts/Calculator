@@ -16,7 +16,7 @@ jobs:
       - name: Deploy Calculator to IIS
         run: |
           echo Deploying Calculator
-          xcopy . C:\inetpub\calculator /Y /E /I /EXCLUDE:.git,.github
+          xcopy . C:\inetpub\calculator /EXCLUDE:.git,.github /Y /E /I /EXCLUDE:.git,.github
 
       - name: Restart IIS App Pool
         run: |
