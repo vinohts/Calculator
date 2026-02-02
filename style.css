@@ -160,4 +160,20 @@ button#equal {
     background-color: #223323;
     color: #ffffff;
   }
+
+.page-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.page-footer p {
+  margin: 0;
+}
   
