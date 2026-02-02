@@ -1,0 +1,29 @@
+name: Deploy Calculator to IIS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Build Calculator App
+        run: |
+          echo Building Calculator
+          mkdir build
+          xcopy * build\ /Y /E /I
+
+      - name: Deploy to IIS
+        run: |
+          echo Deploying to IIS
+          xcopy build\* C:\inetpub\calculator /Y /E /I
+
+      - name: Restart IIS App Pool
+        run: |
+          %windir%\system32\inetsrv\appcmd recycle apppool /apppool.name:DefaultAppPool
