@@ -1,16 +1,14 @@
-name: Calculator CI-CD
+name: Manual Build & Push to ECR
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 env:
-  AWS_REGION: ap-south-1
-  ECR_REPOSITORY: kvs-calculator
-  ECS_CLUSTER: Kvs-Calculator
-  ECS_SERVICE: kvs-calculator-service
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     permissions:
@@ -21,10 +19,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::YOUR_ACCOUNT_ID:role/GitHubActionsECSRole
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -35,18 +33,11 @@ jobs:
         run: |
           docker build -t $ECR_REPOSITORY:${{ github.sha }} .
 
-      - name: Tag Image
+      - name: Tag Docker Image
         run: |
           docker tag $ECR_REPOSITORY:${{ github.sha }} \
           ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}
 
-      - name: Push to ECR
+      - name: Push Docker Image to ECR
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}
-
-      - name: Deploy to ECS
-        run: |
-          aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --force-new-deployment
