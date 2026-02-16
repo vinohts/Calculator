@@ -1,43 +1,115 @@
-name: Manual Build & Push to ECR
+name: Calculator Build, Push & Deploy to ECS
 
 on:
   workflow_dispatch:
 
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-
 jobs:
-  build-and-push:
+  build-and-deploy:
+    name: Build, Push & Deploy Docker Image
     runs-on: ubuntu-latest
 
     permissions:
       id-token: write
       contents: read
 
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+
     steps:
-      - name: Checkout Code
+      # 1️⃣ Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials (OIDC)
+      # 2️⃣ Configure AWS Credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION }}
 
+      # 3️⃣ Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # 4️⃣ Set Image Tag
+      - name: Set Image Tag
+        id: version
+        run: echo "tag=v1.${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+      # 5️⃣ Build Docker Image
       - name: Build Docker Image
-        run: |
-          docker build -t $ECR_REPOSITORY:${{ github.sha }} .
+        run: docker build -t $ECR_REPOSITORY:${{ steps.version.outputs.tag }} .
 
-      - name: Tag Docker Image
+      # 6️⃣ Tag Docker Image (version)
+      - name: Tag Version Image
         run: |
-          docker tag $ECR_REPOSITORY:${{ github.sha }} \
-          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}
+          docker tag $ECR_REPOSITORY:${{ steps.version.outputs.tag }} \
+          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ steps.version.outputs.tag }}
 
-      - name: Push Docker Image to ECR
+      # 7️⃣ Push Version Image to ECR
+      - name: Push Version Image
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ steps.version.outputs.tag }}
+
+      # 8️⃣ Optional: Tag Latest Image
+      - name: Tag Latest Image
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}
+          docker tag $ECR_REPOSITORY:${{ steps.version.outputs.tag }} \
+          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+
+      - name: Push Latest Image
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+
+      # 9️⃣ Register New ECS Task Definition Revision
+      - name: Register New ECS Task Definition
+        run: |
+          aws ecs register-task-definition \
+            --family $ECS_SERVICE \
+            --container-definitions "[{
+              \"name\":\"$ECS_SERVICE\",
+              \"image\":\"${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ steps.version.outputs.tag }}\",
+              \"cpu\":256,
+              \"memory\":512,
+              \"essential\":true,
+              \"portMappings\":[{\"containerPort\":80,\"protocol\":\"tcp\"}]
+            }]" \
+            --requires-compatibilities "FARGATE" \
+            --network-mode "awsvpc" \
+            --cpu "256" \
+            --memory "512" \
+            --execution-role-arn "arn:aws:iam::758890598841:role/ecsTaskExecutionRole" \
+            --region $AWS_REGION
+
+      # 🔟 Update ECS Service to New Task Definition Revision
+      - name: Update ECS Service
+        run: |
+          NEW_REVISION=$(aws ecs describe-task-definition \
+            --task-definition $ECS_SERVICE \
+            --region $AWS_REGION \
+            --query 'taskDefinition.revision' \
+            --output text)
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition "$ECS_SERVICE:$NEW_REVISION" \
+            --force-new-deployment \
+            --region $AWS_REGION
+
+      # 1️⃣1️⃣ Wait for ECS Service to Stabilize
+      - name: Wait for ECS Deployment to Stabilize
+        run: |
+          echo "Waiting for ECS service to become stable..."
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --region $AWS_REGION
+          echo "ECS service is stable ✅"
+
+      # 1️⃣2️⃣ Print Deployment Info
+      - name: Print Deployment Info
+        run: |
+          echo "Calculator image deployed: ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ steps.version.outputs.tag }}"
+          echo "Deployment completed successfully 🚀"
