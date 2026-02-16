@@ -176,4 +176,58 @@ button#equal {
 .page-footer p {
   margin: 0;
 }
-  
+
+/* =========================
+   API TOP SECTION
+========================= */
+
+.api-top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.btn-api {
+    height: 35px;
+    width: 60px;
+    border-radius: 20px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+}
+
+/* Light Theme */
+.calculator .btn-api {
+    background-color: #4caf50;
+    color: #ffffff;
+}
+
+/* Dark Theme */
+.calculator.dark .btn-api {
+    background-color: #0f5132;
+    color: #ffffff;
+}
+
+.api-response {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    display: none;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Light */
+.calculator .api-response {
+    background-color: #e6f7ff;
+    color: #000;
+}
+
+/* Dark */
+.calculator.dark .api-response {
+    background-color: #1b2f38;
+    color: #fff;
+}
