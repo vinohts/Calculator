@@ -1,0 +1,36 @@
+name: Check Hostname
+
+on:
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+  push:
+    branches: [ "main" ]
+
+jobs:
+  get-system-info:
+    # Matches the self-hosted runner and custom label you created
+    runs-on: [self-hosted, gr-dev-calculator]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Display Hostname & Environment Details
+        shell: powershell
+        run: |
+          Write-Host "==========================================" -ForegroundColor Cyan
+          Write-Host " RUNNER HOSTNAME & ENVIRONMENT DETAILS" -ForegroundColor Cyan
+          Write-Host "==========================================" -ForegroundColor Cyan
+          
+          # Print the machine hostname
+          $hostname = [System.Net.Dns]::GetHostName()
+          Write-Host "Hostname (DNS)  : $hostname" -ForegroundColor Green
+          Write-Host "Computer Name   : $env:COMPUTERNAME" -ForegroundColor Green
+          
+          Write-Host "------------------------------------------"
+          
+          # Print workspace & user context
+          Write-Host "User Account    : $env:USERNAME"
+          Write-Host "Workspace Path  : $env:GITHUB_WORKSPACE"
+          Write-Host "OS Version      : $((Get-CimInstance Win32_OperatingSystem).Caption)"
+          
+          Write-Host "==========================================" -ForegroundColor Cyan
